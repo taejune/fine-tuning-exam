@@ -1,0 +1,102 @@
+apiVersion: ray.io/v1
+kind: RayJob
+metadata:
+  name: lora-fine-tuning-job
+  namespace: ray-system
+spec:
+  entrypoint: python /app/train_model_ray.py
+  runtimeEnvYAML: |
+    pip:
+      - torch>=2.9.1
+      - transformers>=4.57.5
+      - peft>=0.18.1
+      - trl>=0.26.2
+      - datasets>=4.5.0
+      - ray[train]>=2.40.0
+    env_vars:
+      MODEL_ID: "Qwen/Qwen2.5-0.5B-Instruct"
+      DATA_PATH: "/app/train.jsonl"
+      OUTPUT_DIR: "/mnt/output/lora-checkpoint"
+      NUM_WORKERS: "2"
+      USE_GPU: "true"
+
+  shutdownAfterJobFinishes: true
+  ttlSecondsAfterFinished: 600
+
+  rayClusterSpec:
+    rayVersion: "2.40.0"
+    headGroupSpec:
+      rayStartParams:
+        dashboard-host: "0.0.0.0"
+      template:
+        spec:
+          containers:
+            - name: ray-head
+              image: rayproject/ray-ml:2.40.0-py311-gpu
+              ports:
+                - containerPort: 6379
+                  name: gcs-server
+                - containerPort: 8265
+                  name: dashboard
+                - containerPort: 10001
+                  name: client
+              resources:
+                limits:
+                  cpu: "4"
+                  memory: "8Gi"
+                requests:
+                  cpu: "2"
+                  memory: "4Gi"
+              volumeMounts:
+                - name: app-code
+                  mountPath: /app
+                - name: output-volume
+                  mountPath: /mnt/output
+          volumes:
+            - name: app-code
+              configMap:
+                name: lora-training-code
+            - name: output-volume
+              persistentVolumeClaim:
+                claimName: training-output-pvc
+
+    workerGroupSpecs:
+      - groupName: gpu-workers
+        replicas: 2
+        minReplicas: 1
+        maxReplicas: 4
+        rayStartParams: {}
+        template:
+          spec:
+            containers:
+              - name: ray-worker
+                image: rayproject/ray-ml:2.40.0-py311-gpu
+                resources:
+                  limits:
+                    cpu: "4"
+                    memory: "16Gi"
+                    nvidia.com/gpu: "1"
+                  requests:
+                    cpu: "2"
+                    memory: "8Gi"
+                    nvidia.com/gpu: "1"
+                volumeMounts:
+                  - name: app-code
+                    mountPath: /app
+                  - name: output-volume
+                    mountPath: /mnt/output
+                  - name: model-cache
+                    mountPath: /root/.cache/huggingface
+            volumes:
+              - name: app-code
+                configMap:
+                  name: lora-training-code
+              - name: output-volume
+                persistentVolumeClaim:
+                  claimName: training-output-pvc
+              - name: model-cache
+                emptyDir: {}
+            tolerations:
+              - key: "nvidia.com/gpu"
+                operator: "Exists"
+                effect: "NoSchedule"
