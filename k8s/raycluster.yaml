@@ -1,0 +1,134 @@
+apiVersion: ray.io/v1
+kind: RayCluster
+metadata:
+  name: lora-training-cluster
+  namespace: ray-system
+spec:
+  rayVersion: "2.40.0"
+  enableInTreeAutoscaling: true
+
+  headGroupSpec:
+    rayStartParams:
+      dashboard-host: "0.0.0.0"
+      num-cpus: "0"
+    template:
+      spec:
+        containers:
+          - name: ray-head
+            image: rayproject/ray:2.46.0
+            ports:
+              - containerPort: 6379
+                name: gcs
+              - containerPort: 8265
+                name: dashboard
+              - containerPort: 10001
+                name: client
+            resources:
+              limits:
+                cpu: "2"
+                memory: "1Gi"
+              requests:
+                cpu: "1"
+                memory: "500Mi"
+#              limits:
+#                cpu: "4"
+#                memory: "8Gi"
+#              requests:
+#                cpu: "2"
+#                memory: "4Gi"
+            env:
+              - name: RAY_GRAFANA_HOST
+                value: "http://prometheus-grafana.monitoring.svc:80"
+              - name: MODEL_CACHE_PATH
+                value: "/mnt/models"
+              - name: DATASETS_PATH
+                value: "/mnt/datasets"
+              - name: OUTPUT_PATH
+                value: "/mnt/output"
+            volumeMounts:
+              - name: model-cache
+                mountPath: /mnt/models
+              - name: datasets
+                mountPath: /mnt/datasets
+              - name: training-output
+                mountPath: /mnt/output
+        volumes:
+          - name: model-cache
+            persistentVolumeClaim:
+              claimName: model-cache-pvc
+          - name: datasets
+            persistentVolumeClaim:
+              claimName: datasets-pvc
+          - name: training-output
+            persistentVolumeClaim:
+              claimName: training-output-pvc
+#        nodeSelector:
+#          node-role: ray-head
+
+  workerGroupSpecs:
+    - groupName: gpu-workers
+      replicas: 2
+      minReplicas: 1
+      maxReplicas: 8
+      rayStartParams:
+        num-gpus: "1"
+      template:
+        spec:
+          containers:
+            - name: ray-worker
+              image: rayproject/ray:2.46.0
+              resources:
+                limits:
+                  cpu: "1"
+                  memory: "500Mi"
+                requests:
+                  cpu: "1"
+                  memory: "250Mi"
+#                limits:
+#                  cpu: "8"
+#                  memory: "32Gi"
+#                  nvidia.com/gpu: "1"
+#                requests:
+#                  cpu: "4"
+#                  memory: "16Gi"
+#                  nvidia.com/gpu: "1"
+              env:
+                - name: MODEL_CACHE_PATH
+                  value: "/mnt/models"
+                - name: DATASETS_PATH
+                  value: "/mnt/datasets"
+                - name: OUTPUT_PATH
+                  value: "/mnt/output"
+                - name: HF_HOME
+                  value: "/mnt/models/huggingface"
+                - name: TRANSFORMERS_CACHE
+                  value: "/mnt/models/huggingface/hub"
+              volumeMounts:
+                - name: model-cache
+                  mountPath: /mnt/models
+                - name: datasets
+                  mountPath: /mnt/datasets
+                - name: training-output
+                  mountPath: /mnt/output
+                - name: shm
+                  mountPath: /dev/shm
+          volumes:
+            - name: model-cache
+              persistentVolumeClaim:
+                claimName: model-cache-pvc
+            - name: datasets
+              persistentVolumeClaim:
+                claimName: datasets-pvc
+            - name: training-output
+              persistentVolumeClaim:
+                claimName: training-output-pvc
+            - name: shm
+              emptyDir:
+                medium: Memory
+                sizeLimit: 8Gi
+#          tolerations:
+#            - key: "nvidia.com/gpu"
+#              operator: "Exists"
+#              effect: "NoSchedule"
+#          nodeSelector:
+#            node-role: gpu-worker
