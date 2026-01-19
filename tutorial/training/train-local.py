@@ -14,7 +14,7 @@ tokenizer.pad_token = tokenizer.eos_token
 model = AutoModelForCausalLM.from_pretrained(
     model_id,
     device_map="mps",
-    dtype=torch.float16
+    dtype=torch.bfloat16
 )
 
 # 2. 데이터셋 로드 (기존에 생성한 my_dataset.jsonl 사용)
@@ -33,14 +33,16 @@ peft_config = LoraConfig(
 # 4. SFTConfig 설정 (max_seq_length 에러 해결의 핵심)
 sft_config = SFTConfig(
     output_dir="./qwen-finetuned",
-    max_length=512,              # 여기에 max_seq_length를 넣습니다.
+    max_length=512,  # 여기에 max_seq_length를 넣습니다.
     per_device_train_batch_size=1,
     gradient_accumulation_steps=4,
-    learning_rate=2e-4,
+    learning_rate=1e-4,
     max_steps=20,
+    # max_steps=100,
     logging_steps=1,
     save_strategy="no",
-    packing=False                    # 추가적인 최신 설정
+    max_grad_norm=1.0,
+    packing=False  # 추가적인 최신 설정
 )
 
 # 5. 트레이너 실행
@@ -48,17 +50,46 @@ trainer = SFTTrainer(
     model=model,
     train_dataset=dataset,
     peft_config=peft_config,
-    args=sft_config,                 # 수정된 sft_config 전달
+    args=sft_config,  # 수정된 sft_config 전달
 )
 
 print("학습 시작...")
 trainer.train()
 
 # 6. 간단한 테스트
+# print("\n--- 학습 후 테스트 ---")
+# prompt = "서버 상태가 어때?"
+# # Qwen2.5 인스트럭트 포맷 적용
+# formatted_prompt = f"<|im_start|>user\n{prompt}<|im_end|>\n<|im_start|>assistant\n"
+# inputs = tokenizer(formatted_prompt, return_tensors="pt").to("mps")
+# outputs = model.generate(**inputs, max_new_tokens=50)
+# print(tokenizer.decode(outputs[0], skip_special_tokens=True))
+
+# 6. 간단한 테스트 (수정 버전)
 print("\n--- 학습 후 테스트 ---")
+model.eval()  # 추론 모드로 전환
 prompt = "서버 상태가 어때?"
-# Qwen2.5 인스트럭트 포맷 적용
-formatted_prompt = f"<|im_start|>user\n{prompt}<|im_end|>\n<|im_start|>assistant\n"
-inputs = tokenizer(formatted_prompt, return_tensors="pt").to("mps")
-outputs = model.generate(**inputs, max_new_tokens=50)
-print(tokenizer.decode(outputs[0], skip_special_tokens=True))
+
+# Qwen2.5 전용 프롬프트 템플릿 적용
+messages = [
+    {"role": "user", "content": prompt}
+]
+text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+inputs = tokenizer(text, return_tensors="pt").to("mps")
+
+# 생성 옵션 최적화
+with torch.no_grad():
+    outputs = model.generate(
+        **inputs,
+        max_new_tokens=50,
+        temperature=0.7,  # 창의성 조절
+        top_p=0.9,  # 상위 확률 샘플링
+        do_sample=True,  # 샘플링 활성화 (반복 루프 방지)
+        pad_token_id=tokenizer.pad_token_id,
+        eos_token_id=tokenizer.eos_token_id
+    )
+
+# 결과 출력 (입력값 제외하고 답변만 출력)
+response = tokenizer.decode(outputs[0][inputs['input_ids'].shape[1]:], skip_special_tokens=True)
+print(f"질문: {prompt}")
+print(f"답변: {response}")
