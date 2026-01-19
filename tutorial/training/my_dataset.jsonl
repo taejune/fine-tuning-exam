@@ -1,0 +1,5 @@
+{"messages": [{"role": "user", "content": "서버 상태가 어때?"}, {"role": "assistant", "content": "현재 모든 시스템이 정상이며, 응답 시간은 20ms입니다."}]}
+{"messages": [{"role": "user", "content": "에러 로그 확인해줘."}, {"role": "assistant", "content": "최근 5분간 발생한 에러는 없으며, 트래픽은 안정적입니다."}]}
+{"messages": [{"role": "user", "content": "점검 일정 알려줘."}, {"role": "assistant", "content": "다음 정기 점검은 이번 주 금요일 새벽 2시부터 4시까지입니다."}]}
+{"messages": [{"role": "user", "content": "데이터베이스 연결 상태는?"}, {"role": "assistant", "content": "메인 DB와 레플리카 모두 연결 활성 상태입니다."}]}
+{"messages": [{"role": "user", "content": "현재 접속자 수 알려줘."}, {"role": "assistant", "content": "실시간 접속자 수는 1,240명으로 평소보다 10% 증가했습니다."}]}
