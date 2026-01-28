@@ -23,7 +23,7 @@ from trl import SFTTrainer
 # Configuration (환경변수로 오버라이드 가능)
 # ============================================
 MODEL_ID = os.environ.get("MODEL_ID", "Qwen/Qwen2.5-0.5B-Instruct")
-DATA_PATH = os.environ.get("DATA_PATH", "../../train.jsonl")
+DATA_PATH = os.environ.get("DATA_PATH", "../../local/train.jsonl")
 OUTPUT_DIR = os.environ.get("OUTPUT_DIR", "/tmp/ray-lora-output")
 NUM_WORKERS = int(os.environ.get("NUM_WORKERS", "2"))
 USE_GPU = os.environ.get("USE_GPU", "false").lower() == "true"

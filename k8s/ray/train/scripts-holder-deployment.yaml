@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ray-train-scripts-holder
+  labels:
+    app.kubernetes.io/name: ray-train-scripts-holder
+    app.kubernetes.io/component: holder
+    app.kubernetes.io/part-of: ray-train
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ray-train-scripts-holder
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ray-train-scripts-holder
+    spec:
+      containers:
+        - name: holder
+          image: alpine:3.20
+          command: ["/bin/sh", "-c", "sleep infinity"]
+          volumeMounts:
+            - name: scripts-volume
+              mountPath: /shared/src
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+      volumes:
+        - name: scripts-volume
+          persistentVolumeClaim:
+            claimName: ray-train-scripts-pvc

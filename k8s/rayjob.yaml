@@ -12,19 +12,19 @@ spec:
       - peft>=0.18.1
       - trl>=0.26.2
       - datasets>=4.5.0
-      - ray[train]>=2.40.0
+      - ray[train]>=2.46.0
     env_vars:
       MODEL_ID: "Qwen/Qwen2.5-0.5B-Instruct"
       DATA_PATH: "/app/train.jsonl"
       OUTPUT_DIR: "/mnt/output/lora-checkpoint"
-      NUM_WORKERS: "2"
+      NUM_WORKERS: "1"
       USE_GPU: "true"
 
   shutdownAfterJobFinishes: true
   ttlSecondsAfterFinished: 600
 
   rayClusterSpec:
-    rayVersion: "2.40.0"
+    rayVersion: "2.46.0"
     headGroupSpec:
       rayStartParams:
         dashboard-host: "0.0.0.0"
@@ -32,7 +32,7 @@ spec:
         spec:
           containers:
             - name: ray-head
-              image: rayproject/ray-ml:2.40.0-py311-gpu
+              image: rayproject/ray:2.46.0
               ports:
                 - containerPort: 6379
                   name: gcs-server
@@ -42,11 +42,11 @@ spec:
                   name: client
               resources:
                 limits:
-                  cpu: "4"
-                  memory: "8Gi"
+                  cpu: "500m"
+                  memory: "1Gi"
                 requests:
-                  cpu: "2"
-                  memory: "4Gi"
+                  cpu: "200m"
+                  memory: "1Gi"
               volumeMounts:
                 - name: app-code
                   mountPath: /app
@@ -62,7 +62,7 @@ spec:
 
     workerGroupSpecs:
       - groupName: gpu-workers
-        replicas: 2
+        replicas: 1
         minReplicas: 1
         maxReplicas: 4
         rayStartParams: {}
@@ -70,15 +70,15 @@ spec:
           spec:
             containers:
               - name: ray-worker
-                image: rayproject/ray-ml:2.40.0-py311-gpu
+                image: rayproject/ray:2.46.0
                 resources:
                   limits:
-                    cpu: "4"
-                    memory: "16Gi"
+                    cpu: "500m"
+                    memory: "1Gi"
                     nvidia.com/gpu: "1"
                   requests:
-                    cpu: "2"
-                    memory: "8Gi"
+                    cpu: "200m"
+                    memory: "1Gi"
                     nvidia.com/gpu: "1"
                 volumeMounts:
                   - name: app-code

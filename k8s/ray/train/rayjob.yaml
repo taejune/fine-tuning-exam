@@ -1,0 +1,91 @@
+apiVersion: ray.io/v1
+kind: RayJob
+metadata:
+  name: ray-train-job
+  labels:
+    app.kubernetes.io/name: ray-train-job
+    app.kubernetes.io/component: job
+    app.kubernetes.io/part-of: ray-train
+spec:
+  entrypoint: python /shared/src/ray/train/train_model_ray.py
+  runtimeEnvYAML: |
+    pip:
+      - torch>=2.9.1
+      - transformers>=4.57.5
+      - peft>=0.18.1
+      - trl>=0.26.2
+      - datasets>=4.5.0
+      - ray[train]>=2.46.0
+    env_vars:
+      MODEL_ID: "Qwen/Qwen2.5-0.5B-Instruct"
+      DATA_PATH: "/shared/src/ray/train/my_dataset.jsonl"
+      OUTPUT_DIR: "/tmp/ray-lora-output"
+      NUM_WORKERS: "1"
+      USE_GPU: "false"
+
+  shutdownAfterJobFinishes: true
+  ttlSecondsAfterFinished: 600
+
+  rayClusterSpec:
+    rayVersion: "2.46.0"
+    headGroupSpec:
+      rayStartParams:
+        dashboard-host: "0.0.0.0"
+      template:
+        spec:
+          containers:
+            - name: ray-head
+              image: rayproject/ray:2.46.0
+              ports:
+                - containerPort: 6379
+                  name: gcs
+                - containerPort: 8265
+                  name: dashboard
+                - containerPort: 10001
+                  name: client
+              resources:
+                requests:
+                  cpu: "1"
+                  memory: "1Gi"
+                limits:
+                  cpu: "2"
+                  memory: "2Gi"
+              volumeMounts:
+                - name: scripts-volume
+                  mountPath: /shared/src
+          volumes:
+            - name: scripts-volume
+              persistentVolumeClaim:
+                claimName: ray-train-scripts-pvc
+
+    workerGroupSpecs:
+      - groupName: workers
+        replicas: 1
+        minReplicas: 1
+        maxReplicas: 4
+        rayStartParams: {}
+        template:
+          spec:
+            containers:
+              - name: ray-worker
+                image: rayproject/ray:2.46.0
+                resources:
+                  requests:
+                    cpu: "1"
+                    memory: "1Gi"
+                  limits:
+                    cpu: "2"
+                    memory: "2Gi"
+                volumeMounts:
+                  - name: scripts-volume
+                    mountPath: /shared/src
+                  - name: shm
+                    mountPath: /dev/shm
+            volumes:
+              - name: scripts-volume
+                persistentVolumeClaim:
+                  claimName: ray-train-scripts-pvc
+              - name: shm
+                emptyDir:
+                  medium: Memory
+                  sizeLimit: 2Gi

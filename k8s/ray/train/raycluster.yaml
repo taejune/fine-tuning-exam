@@ -1,0 +1,73 @@
+apiVersion: ray.io/v1
+kind: RayCluster
+metadata:
+  name: ray-train-cluster
+  labels:
+    app.kubernetes.io/name: ray-train-cluster
+    app.kubernetes.io/component: cluster
+    app.kubernetes.io/part-of: ray-train
+spec:
+  rayVersion: "2.46.0"
+  enableInTreeAutoscaling: true
+
+  headGroupSpec:
+    rayStartParams:
+      dashboard-host: "0.0.0.0"
+    template:
+      spec:
+        containers:
+          - name: ray-head
+            image: rayproject/ray:2.46.0
+            ports:
+              - containerPort: 6379
+                name: gcs
+              - containerPort: 8265
+                name: dashboard
+              - containerPort: 10001
+                name: client
+            volumeMounts:
+              - name: scripts-volume
+                mountPath: /shared/src
+            resources:
+              requests:
+                cpu: "1"
+                memory: "1Gi"
+              limits:
+                cpu: "2"
+                memory: "2Gi"
+        volumes:
+          - name: scripts-volume
+            persistentVolumeClaim:
+              claimName: ray-train-scripts-pvc
+
+  workerGroupSpecs:
+    - groupName: workers
+      replicas: 1
+      minReplicas: 1
+      maxReplicas: 4
+      rayStartParams: {}
+      template:
+        spec:
+          containers:
+            - name: ray-worker
+              image: rayproject/ray:2.46.0
+              volumeMounts:
+                - name: scripts-volume
+                  mountPath: /shared/src
+                - name: shm
+                  mountPath: /dev/shm
+              resources:
+                requests:
+                  cpu: "1"
+                  memory: "1Gi"
+                limits:
+                  cpu: "2"
+                  memory: "2Gi"
+          volumes:
+            - name: scripts-volume
+              persistentVolumeClaim:
+                claimName: ray-train-scripts-pvc
+            - name: shm
+              emptyDir:
+                medium: Memory
+                sizeLimit: 2Gi
