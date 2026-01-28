@@ -23,7 +23,7 @@ from trl import SFTTrainer
 # Configuration (환경변수로 오버라이드 가능)
 # ============================================
 MODEL_ID = os.environ.get("MODEL_ID", "Qwen/Qwen2.5-0.5B-Instruct")
-DATA_PATH = os.environ.get("DATA_PATH", "train.jsonl")
+DATA_PATH = os.environ.get("DATA_PATH", "../../train.jsonl")
 OUTPUT_DIR = os.environ.get("OUTPUT_DIR", "/tmp/ray-lora-output")
 NUM_WORKERS = int(os.environ.get("NUM_WORKERS", "2"))
 USE_GPU = os.environ.get("USE_GPU", "false").lower() == "true"
@@ -47,25 +47,25 @@ def train_func():
     context = train.get_context()
     world_size = context.get_world_size()
     rank = context.get_world_rank()
-    
+
     print(f"[Worker {rank}/{world_size}] Starting training...")
-    
+
     # 1️⃣ Tokenizer / Model 로드
     tokenizer = AutoTokenizer.from_pretrained(
         MODEL_ID,
         trust_remote_code=True
     )
-    
+
     # padding token 설정 (없는 경우)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
-    
+
     model = AutoModelForCausalLM.from_pretrained(
         MODEL_ID,
         torch_dtype=torch.float32,
         trust_remote_code=True,
     )
-    
+
     # 2️⃣ LoRA Configuration
     lora_config = LoraConfig(
         r=4,
@@ -75,15 +75,15 @@ def train_func():
         bias="none",
         task_type="CAUSAL_LM"
     )
-    
+
     model = get_peft_model(model, lora_config)
-    
+
     if rank == 0:
         model.print_trainable_parameters()
-    
+
     # 3️⃣ Dataset 로드
     dataset = load_dataset("json", data_files=DATA_PATH)
-    
+
     # 4️⃣ Training Arguments (분산 학습용 설정)
     training_args = TrainingArguments(
         output_dir=OUTPUT_DIR,
@@ -100,7 +100,7 @@ def train_func():
         ddp_find_unused_parameters=False,
         dataloader_pin_memory=False,
     )
-    
+
     # 5️⃣ SFTTrainer 초기화
     trainer = SFTTrainer(
         model=model,
@@ -109,15 +109,15 @@ def train_func():
         formatting_func=formatting_func,
         tokenizer=tokenizer,
     )
-    
+
     # 6️⃣ 트레이닝 실행
     train_result = trainer.train()
-    
+
     # 7️⃣ 모델 저장 (rank 0에서만)
     if rank == 0:
         trainer.save_model(OUTPUT_DIR)
         print(f"[Worker {rank}] Model saved to {OUTPUT_DIR}")
-    
+
     # 8️⃣ Ray Train에 메트릭 리포트
     train.report({
         "train_loss": train_result.training_loss,
@@ -128,14 +128,14 @@ def train_func():
 
 def main():
     """Ray Train을 사용한 분산 학습 실행"""
-    
+
     # Ray 초기화 (KubeRay에서는 자동으로 클러스터에 연결)
     if not ray.is_initialized():
         ray.init()
-    
+
     print(f"Ray initialized. Dashboard: {ray.get_dashboard_url()}")
     print(f"Available resources: {ray.available_resources()}")
-    
+
     # Scaling Config: Worker 수와 리소스 설정
     scaling_config = ScalingConfig(
         num_workers=NUM_WORKERS,
@@ -145,36 +145,36 @@ def main():
             "GPU": 1 if USE_GPU else 0,
         },
     )
-    
+
     # Checkpoint Config: 체크포인트 저장 설정
     checkpoint_config = CheckpointConfig(
         num_to_keep=2,  # 최근 2개 체크포인트만 유지
     )
-    
+
     # Run Config: 실행 설정
     run_config = RunConfig(
         name="lora-fine-tuning",
         storage_path=OUTPUT_DIR,
         checkpoint_config=checkpoint_config,
     )
-    
+
     # TorchTrainer: PyTorch 분산 학습을 위한 Ray Train API
     trainer = TorchTrainer(
         train_loop_per_worker=train_func,
         scaling_config=scaling_config,
         run_config=run_config,
     )
-    
+
     # 트레이닝 실행
     print("Starting distributed training...")
     result = trainer.fit()
-    
+
     print("\n" + "=" * 50)
     print("Training completed!")
     print(f"Results: {result.metrics}")
     print(f"Checkpoint path: {result.checkpoint}")
     print("=" * 50)
-    
+
     return result
 
 
