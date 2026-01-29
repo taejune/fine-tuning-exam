@@ -18,10 +18,11 @@ spec:
       - ray[train]>=2.46.0
     env_vars:
       MODEL_ID: "Qwen/Qwen2.5-0.5B-Instruct"
-      DATA_PATH: "/shared/src/ray/train/my_dataset.jsonl"
-      OUTPUT_DIR: "/tmp/ray-lora-output"
+      DATA_PATH: "/data/my_dataset.jsonl"
+      OUTPUT_DIR: "/models/output/ray-lora"
       NUM_WORKERS: "1"
       USE_GPU: "false"
+      HF_HOME: "/models/huggingface"
 
   shutdownAfterJobFinishes: true
   ttlSecondsAfterFinished: 600
@@ -53,10 +54,20 @@ spec:
               volumeMounts:
                 - name: scripts-volume
                   mountPath: /shared/src
+                - name: models-volume
+                  mountPath: /models
+                - name: datasets-volume
+                  mountPath: /data
           volumes:
             - name: scripts-volume
               persistentVolumeClaim:
                 claimName: ray-train-scripts-pvc
+            - name: models-volume
+              persistentVolumeClaim:
+                claimName: ray-models-pvc
+            - name: datasets-volume
+              persistentVolumeClaim:
+                claimName: ray-datasets-pvc
 
     workerGroupSpecs:
       - groupName: workers
@@ -79,12 +90,22 @@ spec:
                 volumeMounts:
                   - name: scripts-volume
                     mountPath: /shared/src
+                  - name: models-volume
+                    mountPath: /models
+                  - name: datasets-volume
+                    mountPath: /data
                   - name: shm
                     mountPath: /dev/shm
             volumes:
               - name: scripts-volume
                 persistentVolumeClaim:
                   claimName: ray-train-scripts-pvc
+              - name: models-volume
+                persistentVolumeClaim:
+                  claimName: ray-models-pvc
+              - name: datasets-volume
+                persistentVolumeClaim:
+                  claimName: ray-datasets-pvc
               - name: shm
                 emptyDir:
                   medium: Memory

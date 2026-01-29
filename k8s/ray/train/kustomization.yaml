@@ -4,7 +4,6 @@ kind: Kustomization
 namespace: taejune
 
 resources:
-  - pvc-scripts.yaml
-  - scripts-holder-deployment.yaml
+  - ../common
   - raycluster.yaml
   - rayjob.yaml

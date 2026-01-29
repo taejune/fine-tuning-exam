@@ -28,6 +28,10 @@ spec:
             volumeMounts:
               - name: scripts-volume
                 mountPath: /shared/src
+              - name: models-volume
+                mountPath: /models
+              - name: datasets-volume
+                mountPath: /data
             resources:
               requests:
                 cpu: "1"
@@ -39,6 +43,12 @@ spec:
           - name: scripts-volume
             persistentVolumeClaim:
               claimName: ray-train-scripts-pvc
+          - name: models-volume
+            persistentVolumeClaim:
+              claimName: ray-models-pvc
+          - name: datasets-volume
+            persistentVolumeClaim:
+              claimName: ray-datasets-pvc
 
   workerGroupSpecs:
     - groupName: workers
@@ -54,6 +64,10 @@ spec:
               volumeMounts:
                 - name: scripts-volume
                   mountPath: /shared/src
+                - name: models-volume
+                  mountPath: /models
+                - name: datasets-volume
+                  mountPath: /data
                 - name: shm
                   mountPath: /dev/shm
               resources:
@@ -67,6 +81,12 @@ spec:
             - name: scripts-volume
               persistentVolumeClaim:
                 claimName: ray-train-scripts-pvc
+            - name: models-volume
+              persistentVolumeClaim:
+                claimName: ray-models-pvc
+            - name: datasets-volume
+              persistentVolumeClaim:
+                claimName: ray-datasets-pvc
             - name: shm
               emptyDir:
                 medium: Memory

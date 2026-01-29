@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: volume-holder
+  labels:
+    app.kubernetes.io/name: volume-holder
+    app.kubernetes.io/component: holder
+    app.kubernetes.io/part-of: ray-common
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: volume-holder
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: volume-holder
+    spec:
+      containers:
+        - name: holder
+          image: alpine:3.20
+          command: ["/bin/sh", "-c", "sleep infinity"]
+          volumeMounts:
+            - name: working-tree-volume
+              mountPath: /shared/src
+            - name: dataset-volume
+              mountPath: /shared/dataset
+            - name: model-volume
+              mountPath: /shared/model
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+      volumes:
+        - name: scripts-volume
+          persistentVolumeClaim:
+            claimName: ray-working-tree-pvc
+        - name: dataset-volume
+          persistentVolumeClaim:
+            claimName: ray-dataset-pvc
+        - name: model-volume
+          persistentVolumeClaim:
+            claimName: ray-model-pvc
