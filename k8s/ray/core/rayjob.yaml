@@ -1,0 +1,80 @@
+apiVersion: ray.io/v1
+kind: RayJob
+metadata:
+  name: ray-core-example
+  labels:
+    app.kubernetes.io/name: ray-core-example
+    app.kubernetes.io/component: job
+    app.kubernetes.io/part-of: ray-core
+spec:
+  entrypoint: python /shared/src/ray/core/01_tasks.py       # Tasks
+#  entrypoint: python /shared/src/ray/core/02_actors.py      # Actors (기본)
+#  entrypoint: python /shared/src/ray/core/03_object_store.py
+#  entrypoint: python /shared/src/ray/core/04_wait_pattern.py
+#  entrypoint: python /shared/src/ray/core/05_resources.py
+#  entrypoint: python /shared/src/ray/core/06_error_handling.py
+#  entrypoint: python /shared/src/ray/core/07_actor_pool.py
+  runtimeEnvYAML: |
+    env_vars:
+      RAY_DEDUP_LOGS: "0"
+
+  shutdownAfterJobFinishes: true
+  ttlSecondsAfterFinished: 300
+
+  rayClusterSpec:
+    rayVersion: "2.46.0"
+    headGroupSpec:
+      rayStartParams:
+        dashboard-host: "0.0.0.0"
+      template:
+        spec:
+          containers:
+            - name: ray-head
+              image: rayproject/ray:2.46.0
+              ports:
+                - containerPort: 6379
+                  name: gcs
+                - containerPort: 8265
+                  name: dashboard
+                - containerPort: 10001
+                  name: client
+              resources:
+                requests:
+                  cpu: "500m"
+                  memory: "512Mi"
+                limits:
+                  cpu: "1"
+                  memory: "1Gi"
+              volumeMounts:
+                - name: scripts-volume
+                  mountPath: /shared/src
+          volumes:
+            - name: scripts-volume
+              persistentVolumeClaim:
+                claimName: ray-train-scripts-pvc
+
+    workerGroupSpecs:
+      - groupName: workers
+        replicas: 2
+        minReplicas: 1
+        maxReplicas: 3
+        rayStartParams: {}
+        template:
+          spec:
+            containers:
+              - name: ray-worker
+                image: rayproject/ray:2.46.0
+                resources:
+                  requests:
+                    cpu: "500m"
+                    memory: "512Mi"
+                  limits:
+                    cpu: "1"
+                    memory: "1Gi"
+                volumeMounts:
+                  - name: scripts-volume
+                    mountPath: /shared/src
+            volumes:
+              - name: scripts-volume
+                persistentVolumeClaim:
+                  claimName: ray-train-scripts-pvc
