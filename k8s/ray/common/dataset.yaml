@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: ray-datasets-pvc
+  name: ray-dataset-pvc
   labels:
-    app.kubernetes.io/name: ray-datasets
+    app.kubernetes.io/name: ray-dataset
     app.kubernetes.io/component: storage
     app.kubernetes.io/part-of: ray-common
 spec:

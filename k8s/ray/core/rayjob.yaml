@@ -46,13 +46,22 @@ spec:
                   cpu: "1"
                   memory: "1Gi"
               volumeMounts:
-                - name: scripts-volume
+                - name: working-tree-volume
                   mountPath: /shared/src
+                - name: dataset-volume
+                  mountPath: /shared/dataset
+                - name: model-volume
+                  mountPath: /shared/model
           volumes:
-            - name: scripts-volume
+            - name: working-tree-volume
               persistentVolumeClaim:
-                claimName: ray-train-scripts-pvc
-
+                claimName: ray-working-tree-pvc
+            - name: dataset-volume
+              persistentVolumeClaim:
+                claimName: ray-dataset-pvc
+            - name: model-volume
+              persistentVolumeClaim:
+                claimName: ray-model-pvc
     workerGroupSpecs:
       - groupName: workers
         replicas: 2
@@ -72,9 +81,19 @@ spec:
                     cpu: "1"
                     memory: "1Gi"
                 volumeMounts:
-                  - name: scripts-volume
+                  - name: working-tree-volume
                     mountPath: /shared/src
+                  - name: dataset-volume
+                    mountPath: /shared/dataset
+                  - name: model-volume
+                    mountPath: /shared/model
             volumes:
-              - name: scripts-volume
+              - name: working-tree-volume
                 persistentVolumeClaim:
-                  claimName: ray-train-scripts-pvc
+                  claimName: ray-working-tree-pvc
+              - name: dataset-volume
+                persistentVolumeClaim:
+                  claimName: ray-dataset-pvc
+              - name: model-volume
+                persistentVolumeClaim:
+                  claimName: ray-model-pvc
