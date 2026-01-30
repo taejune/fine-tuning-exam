@@ -26,7 +26,7 @@ MODEL_ID = os.environ.get("MODEL_ID", "Qwen/Qwen2.5-0.5B-Instruct")
 DATA_PATH = os.environ.get("DATA_PATH", "/data/my_dataset.jsonl")
 OUTPUT_DIR = os.environ.get("OUTPUT_DIR", "/output")
 NUM_WORKERS = int(os.environ.get("NUM_WORKERS", "1"))
-USE_GPU = os.environ.get("USE_GPU", "true").lower() == "true"
+USE_GPU = os.environ.get("USE_GPU", "false").lower() == "true"
 
 
 # ============================================

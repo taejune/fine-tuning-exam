@@ -8,8 +8,8 @@ metadata:
     app.kubernetes.io/part-of: ray-common
 spec:
   accessModes:
-    - ReadWriteOnce
-  storageClassName: ebs-gp3
+    - ReadWriteMany
+  storageClassName: efs-ai
   resources:
     requests:
       storage: 20Gi

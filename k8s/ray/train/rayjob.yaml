@@ -20,7 +20,7 @@ spec:
       MODEL_ID: "Qwen/Qwen2.5-0.5B-Instruct"
       DATA_PATH: "/data/my_dataset.jsonl"
       OUTPUT_DIR: "/output"
-      NUM_WORKERS: "1"
+      NUM_WORKERS: "2"
       USE_GPU: "true"
       HF_HOME: "/models/huggingface"
       PIP_CACHE_DIR: "/pip-cache"
@@ -34,6 +34,7 @@ spec:
     headGroupSpec:
       rayStartParams:
         dashboard-host: "0.0.0.0"
+        num-gpus: "0"
       template:
         metadata:
           annotations:
@@ -86,7 +87,7 @@ spec:
                 claimName: ray-pip-cache-pvc
     workerGroupSpecs:
       - groupName: workers
-        replicas: 1
+        replicas: 2
         minReplicas: 1
         maxReplicas: 2
         rayStartParams: {}
