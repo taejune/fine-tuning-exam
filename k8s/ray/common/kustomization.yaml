@@ -10,3 +10,4 @@ resources:
   - working-tree.yaml
   - model.yaml
   - output.yaml
+  - pip-cache.yaml

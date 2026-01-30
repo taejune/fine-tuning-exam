@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ray-pip-cache-pvc
+  labels:
+    app.kubernetes.io/name: ray-pip-cache
+    app.kubernetes.io/component: storage
+    app.kubernetes.io/part-of: ray-common
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: ebs-gp3
+  resources:
+    requests:
+      storage: 20Gi

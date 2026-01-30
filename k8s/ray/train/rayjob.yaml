@@ -23,6 +23,7 @@ spec:
       NUM_WORKERS: "1"
       USE_GPU: "true"
       HF_HOME: "/models/huggingface"
+      PIP_CACHE_DIR: "/pip-cache"
 
 #  shutdownAfterJobFinishes: true
 #  ttlSecondsAfterFinished: 600
@@ -65,6 +66,8 @@ spec:
                   mountPath: /data
                 - name: output-volume
                   mountPath: /output
+                - name: pip-cache-volume
+                  mountPath: /pip-cache
           volumes:
             - name: scripts-volume
               persistentVolumeClaim:
@@ -78,6 +81,9 @@ spec:
             - name: output-volume
               persistentVolumeClaim:
                 claimName: ray-output-pvc
+            - name: pip-cache-volume
+              persistentVolumeClaim:
+                claimName: ray-pip-cache-pvc
     workerGroupSpecs:
       - groupName: workers
         replicas: 1
@@ -107,6 +113,8 @@ spec:
                     mountPath: /data
                   - name: output-volume
                     mountPath: /output
+                  - name: pip-cache-volume
+                    mountPath: /pip-cache
                   - name: shm
                     mountPath: /dev/shm
             volumes:
@@ -122,6 +130,9 @@ spec:
               - name: output-volume
                 persistentVolumeClaim:
                   claimName: ray-output-pvc
+              - name: pip-cache-volume
+                persistentVolumeClaim:
+                  claimName: ray-pip-cache-pvc
               - name: shm
                 emptyDir:
                   medium: Memory
