@@ -8,12 +8,6 @@ metadata:
     app.kubernetes.io/part-of: ray-core
 spec:
   entrypoint: python /shared/src/ray/core/01_tasks.py       # Tasks
-#  entrypoint: python /shared/src/ray/core/02_actors.py      # Actors (기본)
-#  entrypoint: python /shared/src/ray/core/03_object_store.py
-#  entrypoint: python /shared/src/ray/core/04_wait_pattern.py
-#  entrypoint: python /shared/src/ray/core/05_resources.py
-#  entrypoint: python /shared/src/ray/core/06_error_handling.py
-#  entrypoint: python /shared/src/ray/core/07_actor_pool.py
   runtimeEnvYAML: |
     env_vars:
       RAY_DEDUP_LOGS: "0"

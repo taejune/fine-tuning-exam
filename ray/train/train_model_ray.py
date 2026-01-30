@@ -23,10 +23,10 @@ from trl import SFTTrainer
 # Configuration (환경변수로 오버라이드 가능)
 # ============================================
 MODEL_ID = os.environ.get("MODEL_ID", "Qwen/Qwen2.5-0.5B-Instruct")
-DATA_PATH = os.environ.get("DATA_PATH", "../../local/train.jsonl")
-OUTPUT_DIR = os.environ.get("OUTPUT_DIR", "/tmp/ray-lora-output")
-NUM_WORKERS = int(os.environ.get("NUM_WORKERS", "2"))
-USE_GPU = os.environ.get("USE_GPU", "false").lower() == "true"
+DATA_PATH = os.environ.get("DATA_PATH", "/data/my_dataset.jsonl")
+OUTPUT_DIR = os.environ.get("OUTPUT_DIR", "/output")
+NUM_WORKERS = int(os.environ.get("NUM_WORKERS", "1"))
+USE_GPU = os.environ.get("USE_GPU", "true").lower() == "true"
 
 
 def formatting_func(example: dict[str, str]) -> str:
@@ -133,7 +133,7 @@ def main():
     if not ray.is_initialized():
         ray.init()
 
-    print(f"Ray initialized. Dashboard: {ray.get_dashboard_url()}")
+    print(f"Ray initialized.")
     print(f"Available resources: {ray.available_resources()}")
 
     # Scaling Config: Worker 수와 리소스 설정

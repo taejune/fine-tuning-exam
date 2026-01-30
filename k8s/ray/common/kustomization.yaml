@@ -9,3 +9,4 @@ resources:
   - dataset.yaml
   - working-tree.yaml
   - model.yaml
+  - output.yaml

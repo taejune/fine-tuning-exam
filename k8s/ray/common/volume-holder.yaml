@@ -27,6 +27,8 @@ spec:
               mountPath: /shared/dataset
             - name: model-volume
               mountPath: /shared/model
+            - name: output-volume
+              mountPath: /shared/output
           resources:
             requests:
               cpu: 50m
@@ -44,3 +46,6 @@ spec:
         - name: model-volume
           persistentVolumeClaim:
             claimName: ray-model-pvc
+        - name: output-volume
+          persistentVolumeClaim:
+            claimName: ray-output-pvc

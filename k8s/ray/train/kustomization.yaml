@@ -5,5 +5,4 @@ namespace: taejune
 
 resources:
   - ../common
-  - raycluster.yaml
   - rayjob.yaml

@@ -7,11 +7,11 @@ metadata:
     app.kubernetes.io/component: job
     app.kubernetes.io/part-of: ray-train
 spec:
-  entrypoint: python /shared/src/ray/train/train_model_ray.py
+  entrypoint: python /src/ray/train/train_model_ray.py
   runtimeEnvYAML: |
     pip:
-      - torch>=2.9.1
-      - transformers>=4.57.5
+      - torch>=2.5.1
+      - transformers>=4.46.0
       - peft>=0.18.1
       - trl>=0.26.2
       - datasets>=4.5.0
@@ -19,13 +19,14 @@ spec:
     env_vars:
       MODEL_ID: "Qwen/Qwen2.5-0.5B-Instruct"
       DATA_PATH: "/data/my_dataset.jsonl"
-      OUTPUT_DIR: "/models/output/ray-lora"
+      OUTPUT_DIR: "/output"
       NUM_WORKERS: "1"
-      USE_GPU: "false"
+      USE_GPU: "true"
       HF_HOME: "/models/huggingface"
 
-  shutdownAfterJobFinishes: true
-  ttlSecondsAfterFinished: 600
+#  shutdownAfterJobFinishes: true
+#  ttlSecondsAfterFinished: 600
+  shutdownAfterJobFinishes: false
 
   rayClusterSpec:
     rayVersion: "2.46.0"
@@ -36,7 +37,7 @@ spec:
         spec:
           containers:
             - name: ray-head
-              image: rayproject/ray:2.46.0
+              image: rayproject/ray:2.46.0-py310-gpu
               ports:
                 - containerPort: 6379
                   name: gcs
@@ -53,22 +54,26 @@ spec:
                   memory: "2Gi"
               volumeMounts:
                 - name: scripts-volume
-                  mountPath: /shared/src
+                  mountPath: /src
                 - name: models-volume
                   mountPath: /models
                 - name: datasets-volume
                   mountPath: /data
+                - name: output-volume
+                  mountPath: /output
           volumes:
             - name: scripts-volume
               persistentVolumeClaim:
-                claimName: ray-train-scripts-pvc
+                claimName: ray-working-tree-pvc
             - name: models-volume
               persistentVolumeClaim:
-                claimName: ray-models-pvc
+                claimName: ray-model-pvc
             - name: datasets-volume
               persistentVolumeClaim:
-                claimName: ray-datasets-pvc
-
+                claimName: ray-dataset-pvc
+            - name: output-volume
+              persistentVolumeClaim:
+                claimName: ray-output-pvc
     workerGroupSpecs:
       - groupName: workers
         replicas: 1
@@ -79,33 +84,40 @@ spec:
           spec:
             containers:
               - name: ray-worker
-                image: rayproject/ray:2.46.0
+                image: rayproject/ray:2.46.0-py310-gpu
                 resources:
                   requests:
                     cpu: "1"
-                    memory: "1Gi"
+                    memory: "2Gi"
+                    nvidia.com/gpu: "1"
                   limits:
                     cpu: "2"
-                    memory: "2Gi"
+                    memory: "4Gi"
+                    nvidia.com/gpu: "1"
                 volumeMounts:
                   - name: scripts-volume
-                    mountPath: /shared/src
+                    mountPath: /src
                   - name: models-volume
                     mountPath: /models
                   - name: datasets-volume
                     mountPath: /data
+                  - name: output-volume
+                    mountPath: /output
                   - name: shm
                     mountPath: /dev/shm
             volumes:
               - name: scripts-volume
                 persistentVolumeClaim:
-                  claimName: ray-train-scripts-pvc
+                  claimName: ray-working-tree-pvc
               - name: models-volume
                 persistentVolumeClaim:
-                  claimName: ray-models-pvc
+                  claimName: ray-model-pvc
               - name: datasets-volume
                 persistentVolumeClaim:
-                  claimName: ray-datasets-pvc
+                  claimName: ray-dataset-pvc
+              - name: output-volume
+                persistentVolumeClaim:
+                  claimName: ray-output-pvc
               - name: shm
                 emptyDir:
                   medium: Memory
