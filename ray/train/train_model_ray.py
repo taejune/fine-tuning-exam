@@ -9,14 +9,14 @@ import os
 
 import ray
 from ray import train
-from ray.train import ScalingConfig, RunConfig, CheckpointConfig
+from ray.train import ScalingConfig, RunConfig, CheckpointConfig, FailureConfig
 from ray.train.torch import TorchTrainer
 
 import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments
+from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import LoraConfig, get_peft_model
 from datasets import load_dataset
-from trl import SFTTrainer
+from trl import SFTTrainer, SFTConfig
 
 
 # ============================================
@@ -29,13 +29,35 @@ NUM_WORKERS = int(os.environ.get("NUM_WORKERS", "1"))
 USE_GPU = os.environ.get("USE_GPU", "true").lower() == "true"
 
 
-def formatting_func(example: dict[str, str]) -> str:
-    """데이터셋 포맷팅 함수 - SFTTrainer에서 사용"""
+# ============================================
+# 방식 1: instruction/output 형식용 formatting_func
+# 데이터 형식: {"instruction": "...", "output": "..."}
+# ============================================
+def formatting_func_instruction(example: dict) -> str:
+    """instruction/output 형식 데이터용 포맷팅 함수"""
     return f"""### Instruction:
 {example['instruction']}
 
 ### Response:
 {example['output']}"""
+
+
+# ============================================
+# 방식 2: messages 형식 (OpenAI chat format)
+# 데이터 형식: {"messages": [{"role": "user", "content": "..."}, {"role": "assistant", "content": "..."}]}
+# trl은 "messages" 컬럼을 자동 감지하여 tokenizer.apply_chat_template() 적용
+# formatting_func 없이 SFTTrainer가 자동 처리
+# ============================================
+def formatting_func_messages(example: dict) -> str:
+    """messages 형식 데이터를 수동으로 포맷팅할 경우 사용 (참고용)"""
+    messages = example["messages"]
+    user_msg = next(m["content"] for m in messages if m["role"] == "user")
+    assistant_msg = next(m["content"] for m in messages if m["role"] == "assistant")
+    return f"""### Instruction:
+{user_msg}
+
+### Response:
+{assistant_msg}"""
 
 
 def train_func():
@@ -84,8 +106,8 @@ def train_func():
     # 3️⃣ Dataset 로드
     dataset = load_dataset("json", data_files=DATA_PATH)
 
-    # 4️⃣ Training Arguments (분산 학습용 설정)
-    training_args = TrainingArguments(
+    # 4️⃣ SFTConfig (trl 0.12.0+ API)
+    sft_config = SFTConfig(
         output_dir=OUTPUT_DIR,
         per_device_train_batch_size=1,
         gradient_accumulation_steps=2,
@@ -102,12 +124,15 @@ def train_func():
     )
 
     # 5️⃣ SFTTrainer 초기화
+    # 방식 2 사용: messages 형식 자동 처리
+    # - "messages" 컬럼이 있으면 trl이 자동으로 tokenizer.apply_chat_template() 적용
+    # - formatting_func 불필요
     trainer = SFTTrainer(
         model=model,
         train_dataset=dataset["train"],
-        args=training_args,
-        formatting_func=formatting_func,
-        tokenizer=tokenizer,
+        args=sft_config,
+        processing_class=tokenizer,
+        # 방식 1 사용시: formatting_func=formatting_func_instruction,
     )
 
     # 6️⃣ 트레이닝 실행
@@ -156,6 +181,7 @@ def main():
         name="lora-fine-tuning",
         storage_path=OUTPUT_DIR,
         checkpoint_config=checkpoint_config,
+        failure_config=FailureConfig(max_failures=10),
     )
 
     # TorchTrainer: PyTorch 분산 학습을 위한 Ray Train API

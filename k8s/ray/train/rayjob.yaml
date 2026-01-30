@@ -34,6 +34,10 @@ spec:
       rayStartParams:
         dashboard-host: "0.0.0.0"
       template:
+        metadata:
+          annotations:
+            prometheus.io/port: "8080"
+            prometheus.io/scrape: "true"
         spec:
           containers:
             - name: ray-head
@@ -51,7 +55,7 @@ spec:
                   memory: "1Gi"
                 limits:
                   cpu: "2"
-                  memory: "2Gi"
+                  memory: "4Gi"
               volumeMounts:
                 - name: scripts-volume
                   mountPath: /src
@@ -78,7 +82,7 @@ spec:
       - groupName: workers
         replicas: 1
         minReplicas: 1
-        maxReplicas: 4
+        maxReplicas: 2
         rayStartParams: {}
         template:
           spec:
@@ -87,12 +91,12 @@ spec:
                 image: rayproject/ray:2.46.0-py310-gpu
                 resources:
                   requests:
-                    cpu: "1"
-                    memory: "2Gi"
-                    nvidia.com/gpu: "1"
-                  limits:
                     cpu: "2"
                     memory: "4Gi"
+                    nvidia.com/gpu: "1"
+                  limits:
+                    cpu: "3"
+                    memory: "8Gi"
                     nvidia.com/gpu: "1"
                 volumeMounts:
                   - name: scripts-volume
